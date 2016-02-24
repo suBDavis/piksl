@@ -2,10 +2,11 @@
 //globals
 var pk;
 var isPaused = false;
-var stepTime = 500;
+var stepTime = 1000;
 
 //constants
-var CELLS_WIDE = 100;
+var CELLS_WIDE = 40;
+var WHITE = {"red" : 255, "green": 255, "blue":255};
 
 function stepModel(){
     if(!isPaused){
@@ -18,8 +19,26 @@ function stepModel(){
 $(document).ready(function(){
     pk = new piksl();
     pk.update();
-    stepModel();
+    //stepModel();
 });
+
+function randomColor(mix){
+    var red = Math.floor(Math.random() * 255);
+    var green = Math.floor(Math.random() * 255);
+    var blue = Math.floor(Math.random() * 255);
+    return {"red" : red, "green" : green, "blue" : blue};
+}
+
+function mix(color1, color2){
+    var red = (color1.red + color2.red) / 2;
+    var green = (color1.green + color2.green) / 2;
+    var blue = (color1.blue + color2.blue) / 2;
+    return {"red" : Math.floor(red), "green" : Math.floor(green), "blue" : Math.floor(blue)};
+}
+
+function colorString(color){
+    return "#" + color.red.toString(16) + color.green.toString(16) + color.blue.toString(16);
+}
 
 //returns a list of cell objects weighted at the sides of the screen
 function randomize(width, height){
@@ -61,6 +80,22 @@ function randomize(width, height){
     return cells;
 }
 
+function random_colorize(width, height){
+    cells = [];
+    for (i = 0; i < width; i++){
+        for (j = 0 ; j < height; j++){
+            var color = randomColor();
+            color = mix(color, WHITE);
+            color = mix(color, WHITE);
+            color = mix(color, WHITE);
+            color = mix(color, WHITE);
+            var cell = {x:i, y:j, color: colorString(color)};
+            cells.push(cell);
+        }   
+    }
+    return cells;
+}
+
 function piksl(){
     this.elem = $("#piksel-canvas");
     this.pix_width = this.elem.width();
@@ -68,7 +103,7 @@ function piksl(){
     this.cellsize = Math.floor(this.pix_width / CELLS_WIDE);
     this.cellsHigh = Math.floor(this.pix_height / this.cellsize);
     this.renderAgent = new RenderAgent(CELLS_WIDE, this.cellsHigh, this.cellsize);
-    this.cells = randomize(CELLS_WIDE, this.cellsHigh);
+    this.cells = random_colorize(CELLS_WIDE, this.cellsHigh);
 
     this.update = function(){
         this.renderAgent.renderCells(this.cells);
@@ -76,7 +111,7 @@ function piksl(){
 
     this.stepRoom = function(){
         this.renderAgent.clearAll();
-        this.cells = randomize(CELLS_WIDE, this.cellsHigh);
+        this.cells = random_colorize(CELLS_WIDE, this.cellsHigh);
         this.update();
     }
 }
@@ -115,7 +150,7 @@ function RenderAgent(cellsWide, cellsHigh, cellSize){
         for(i = 0; i< activeCells.length; i++){
             var cell = activeCells[i];
 
-            this.context.fillStyle = "#000000";
+            this.context.fillStyle = cell.color;
             var px = this.cellw * (cell.x - this.topleft[0]);
             var py = this.cellh * (cell.y - this.topleft[1]);
             this.context.fillRect(px, py, this.cellw, this.cellh);
