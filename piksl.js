@@ -2,11 +2,14 @@
 //globals
 var pk;
 var isPaused = false;
-var stepTime = 1000;
+var stepTime = 50;
 
 //constants
 var CELLS_WIDE = 40;
-var WHITE = {"red" : 255, "green": 255, "blue":255};
+var WHITE = {"red" : 179, "green": 217, "blue":255};
+var DEFAULT = {"red" : 255, "green": 255, "blue":255};
+var INCREMENT = .95;
+var MAX_LOOP = 20;
 
 function stepModel(){
     if(!isPaused){
@@ -19,20 +22,20 @@ function stepModel(){
 $(document).ready(function(){
     pk = new piksl();
     pk.update();
-    //stepModel();
+    stepModel();
 });
 
-function randomColor(mix){
+function randomColor(){
     var red = Math.floor(Math.random() * 255);
     var green = Math.floor(Math.random() * 255);
     var blue = Math.floor(Math.random() * 255);
     return {"red" : red, "green" : green, "blue" : blue};
 }
 
-function mix(color1, color2){
-    var red = (color1.red + color2.red) / 2;
-    var green = (color1.green + color2.green) / 2;
-    var blue = (color1.blue + color2.blue) / 2;
+function mix(color1, color2, increment){
+    var red = color1.red * increment + color2.red * (1- increment);
+    var green = color1.green * increment + color2.green * (1- increment);
+    var blue = color1.blue * increment + color2.blue * (1- increment);
     return {"red" : Math.floor(red), "green" : Math.floor(green), "blue" : Math.floor(blue)};
 }
 
@@ -81,16 +84,25 @@ function randomize(width, height){
 }
 
 function random_colorize(width, height){
-    cells = [];
+    cells = {};
     for (i = 0; i < width; i++){
         for (j = 0 ; j < height; j++){
-            var color = randomColor();
-            color = mix(color, WHITE);
-            color = mix(color, WHITE);
-            color = mix(color, WHITE);
-            color = mix(color, WHITE);
-            var cell = {x:i, y:j, color: colorString(color)};
-            cells.push(cell);
+            var rand = Math.random();
+            var pulse_prob = 1;
+            var original = randomColor();
+            var color = mix(original, WHITE, .5);
+            color = mix(color, DEFAULT, .5);
+            //color = mix(color, WHITE);
+            var cell = {x:i, y:j, color: color, top: color, pure: original, pulse:false};
+            if (rand < pulse_prob){
+                var dir = Math.random();
+                var dir_prob = .5;
+                cell["pulse"] = true;
+                cell["direction"] = (dir < dir_prob) ? true : false;
+                cell["color"] = (dir < dir_prob) ? WHITE : color;
+                cell["loop"] = rand * MAX_LOOP;
+            }
+            cells[ i.toString() + "." + j.toString() ] = cell; 
         }   
     }
     return cells;
@@ -102,17 +114,52 @@ function piksl(){
     this.pix_height = this.elem.height();
     this.cellsize = Math.floor(this.pix_width / CELLS_WIDE);
     this.cellsHigh = Math.floor(this.pix_height / this.cellsize);
+    this.cellsWide = CELLS_WIDE;
     this.renderAgent = new RenderAgent(CELLS_WIDE, this.cellsHigh, this.cellsize);
     this.cells = random_colorize(CELLS_WIDE, this.cellsHigh);
 
+    this.pulseCells = function(){
+        var cells = this.cells;
+        for (i = 0; i < this.cellsWide; i++){
+            for (j = 0 ; j < this.cellsHigh; j++){
+                var key  = i.toString() + "." + j.toString();
+                var cell = cells[key];
+                if (cell.pulse){
+                    if (cell.direction){
+                        //toward top
+                        if (cell.loop < MAX_LOOP){
+                            cell.color = mix(cell.color, cell.top, INCREMENT);
+                            cell.loop++;
+                        } else {
+                            cell.direction = !cell.direction;
+                            cell.loop = 0;
+                        }
+                    } else {
+                        //toward default
+                        if (cell.loop < MAX_LOOP){
+                            cell.color = mix(cell.color,  WHITE, INCREMENT);
+                            cell.loop++;
+                        } else {
+                            cell.direction = !cell.direction;
+                            cell.loop = 0;
+                        }
+                    }
+                }
+            }   
+        }
+    }
     this.update = function(){
         this.renderAgent.renderCells(this.cells);
     }
 
     this.stepRoom = function(){
         this.renderAgent.clearAll();
-        this.cells = random_colorize(CELLS_WIDE, this.cellsHigh);
+        this.pulseCells()
         this.update();
+    }
+    this.tap = function(x, y){
+        var cellx = Math.floor(x / this.cellsize);
+        var celly = Math.floor(y / this.cellsize);
     }
 }
 
@@ -147,10 +194,12 @@ function RenderAgent(cellsWide, cellsHigh, cellSize){
         this.context.restore();
         var keys = Object.keys(activeCells);
         //iterate over ALL activeCells
-        for(i = 0; i< activeCells.length; i++){
-            var cell = activeCells[i];
+        var keys = Object.keys(activeCells);
+        for(i = 0; i< keys.length; i++){
+            var key = keys[i];
+            var cell = activeCells[key];
 
-            this.context.fillStyle = cell.color;
+            this.context.fillStyle = colorString(cell.color);
             var px = this.cellw * (cell.x - this.topleft[0]);
             var py = this.cellh * (cell.y - this.topleft[1]);
             this.context.fillRect(px, py, this.cellw, this.cellh);
@@ -203,6 +252,6 @@ function getPosition(event)
     
   } else {
     //regular click
-    
+    pk.tap(x, y);
   }
 }
