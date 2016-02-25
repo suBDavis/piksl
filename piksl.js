@@ -5,11 +5,11 @@ var isPaused = false;
 var stepTime = 50;
 
 //constants
-var CELLS_WIDE = 40;
-var WHITE = {"red" : 179, "green": 217, "blue":255};
-var DEFAULT = {"red" : 255, "green": 255, "blue":255};
+var CELLS_WIDE = 35;
+var DEFAULT = {"red" : 243, "green": 193, "blue":255};
+var WHITE = {"red" : 255, "green": 255, "blue":255};
 var INCREMENT = .95;
-var MAX_LOOP = 20;
+var MAX_LOOP = 50;
 
 function stepModel(){
     if(!isPaused){
@@ -43,46 +43,6 @@ function colorString(color){
     return "#" + color.red.toString(16) + color.green.toString(16) + color.blue.toString(16);
 }
 
-//returns a list of cell objects weighted at the sides of the screen
-function randomize(width, height){
-    var prob_sides = .96;
-    var dropoff = .04;
-    var left_weight = 3;
-
-    var cells = [];
-    var prob = prob_sides;
-
-    for (i=0;i<width/2;i++){
-        //iterate over left half
-        for (j = 0;j < height;j++){
-            //over the full height
-            var rand = Math.random();
-            if (rand < prob){
-                var cell = {x:i, y:j};
-                cells.push(cell);
-            }
-        }
-        prob -= dropoff;
-    }
-
-    prob = prob_sides;
-
-    for (i=width;i > width/2;i--){
-        //iterate over left half
-        for (j = 0;j < height;j++){
-            //over the full height
-            var rand = Math.random();
-            if (rand < prob){
-                var cell = {x:i, y:j};
-                cells.push(cell);
-            }
-        }
-        prob -= dropoff;
-    }
-
-    return cells;
-}
-
 function random_colorize(width, height){
     cells = {};
     for (i = 0; i < width; i++){
@@ -90,16 +50,17 @@ function random_colorize(width, height){
             var rand = Math.random();
             var pulse_prob = 1;
             var original = randomColor();
-            var color = mix(original, WHITE, .5);
-            color = mix(color, DEFAULT, .5);
-            //color = mix(color, WHITE);
+            //for the love of god please refactor this
+            var color = mix(original, DEFAULT, .5);
+            color = mix(color, WHITE, .5);
+            color = mix(color, WHITE, .5);
             var cell = {x:i, y:j, color: color, top: color, pure: original, pulse:false};
             if (rand < pulse_prob){
                 var dir = Math.random();
                 var dir_prob = .5;
                 cell["pulse"] = true;
                 cell["direction"] = (dir < dir_prob) ? true : false;
-                cell["color"] = (dir < dir_prob) ? WHITE : color;
+                cell["color"] = (dir < dir_prob) ? DEFAULT : color;
                 cell["loop"] = rand * MAX_LOOP;
             }
             cells[ i.toString() + "." + j.toString() ] = cell; 
@@ -137,9 +98,17 @@ function piksl(){
                     } else {
                         //toward default
                         if (cell.loop < MAX_LOOP){
-                            cell.color = mix(cell.color,  WHITE, INCREMENT);
+                            cell.color = mix(cell.color, DEFAULT, INCREMENT);
                             cell.loop++;
                         } else {
+                            //at the bottom, change it's top color to something else.
+                            var original = randomColor();
+                            //for the love of god please refactor this
+                            var color = mix(original, DEFAULT, .5);
+                            color = mix(color, WHITE, .5);
+                            color = mix(color, WHITE, .5);
+                            cell.top = color;
+
                             cell.direction = !cell.direction;
                             cell.loop = 0;
                         }
