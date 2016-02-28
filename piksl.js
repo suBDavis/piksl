@@ -2,21 +2,18 @@
 //globals
 var pk;
 var isPaused = false;
-var stepTime = 50;
+var stepTime = 20;
 
 //constants
 var CELLS_WIDE = 35;
-var DEFAULT = {"red" : 243, "green": 193, "blue":255};
 var WHITE = {"red" : 255, "green": 255, "blue":255};
+var DEFAULT_TOP = {"red" : 32, "green": 32, "blue":32};
+var DEFAULT_BOTTOM = {"red" : 0, "green": 0, "blue":0};
+var DEFAULT = {"red" : 0, "green": 0, "blue":0};
+var MAX_DIFFER = .05;
+var DIRECTION_PROB = .5;
 var INCREMENT = .95;
-var MAX_LOOP = 50;
-
-function stepModel(){
-    if(!isPaused){
-        pk.stepRoom();
-        setTimeout(stepModel, stepTime);
-    }
-}
+var MAX_LOOP = 100;
 
 // initializer
 $(document).ready(function(){
@@ -25,50 +22,64 @@ $(document).ready(function(){
     stepModel();
 });
 
+function stepModel(){
+    if(!isPaused){
+        pk.stepRoom();
+        setTimeout(stepModel, stepTime);
+    }
+}
 function randomColor(){
     var red = Math.floor(Math.random() * 255);
     var green = Math.floor(Math.random() * 255);
     var blue = Math.floor(Math.random() * 255);
     return {"red" : red, "green" : green, "blue" : blue};
 }
-
+/* Returns a color in the domain, randomly in the middle of it's cycle */
+function domainColor(color, random){
+    var distance = random * MAX_DIFFER;
+    return mix(color, DEFAULT, distance);
+}
 function mix(color1, color2, increment){
     var red = color1.red * increment + color2.red * (1- increment);
     var green = color1.green * increment + color2.green * (1- increment);
     var blue = color1.blue * increment + color2.blue * (1- increment);
     return {"red" : Math.floor(red), "green" : Math.floor(green), "blue" : Math.floor(blue)};
 }
+function decimalToHex(d, padding) {
+    var hex = Number(d).toString(16);
+    padding = typeof (padding) === "undefined" || padding === null ? padding = 2 : padding;
 
-function colorString(color){
-    return "#" + color.red.toString(16) + color.green.toString(16) + color.blue.toString(16);
+    while (hex.length < padding) {
+        hex = "0" + hex;
+    }
+
+    return hex;
 }
-
+function colorString(color){
+    return "#" + decimalToHex( color.red, 2) + decimalToHex( color.green, 2) + decimalToHex(color.blue, 2);
+}
 function random_colorize(width, height){
     cells = {};
     for (i = 0; i < width; i++){
         for (j = 0 ; j < height; j++){
             var rand = Math.random();
-            var pulse_prob = 1;
+            var direction = Math.random();
             var original = randomColor();
-            //for the love of god please refactor this
-            var color = mix(original, DEFAULT, .5);
-            color = mix(color, WHITE, .5);
-            color = mix(color, WHITE, .5);
-            var cell = {x:i, y:j, color: color, top: color, pure: original, pulse:false};
-            if (rand < pulse_prob){
-                var dir = Math.random();
-                var dir_prob = .5;
-                cell["pulse"] = true;
-                cell["direction"] = (dir < dir_prob) ? true : false;
-                cell["color"] = (dir < dir_prob) ? DEFAULT : color;
-                cell["loop"] = rand * MAX_LOOP;
-            }
+            var color = domainColor(original,rand);
+            var loop = Math.round(MAX_LOOP * rand);
+            var cell = {
+                x:i, 
+                y:j, 
+                pure: original, 
+                color: domainColor(original), 
+                loop: loop, 
+                direction: direction < DIRECTION_PROB ? true : false
+            };
             cells[ i.toString() + "." + j.toString() ] = cell; 
         }   
     }
     return cells;
 }
-
 function piksl(){
     this.elem = $("#piksel-canvas");
     this.pix_width = this.elem.width();
@@ -85,33 +96,24 @@ function piksl(){
             for (j = 0 ; j < this.cellsHigh; j++){
                 var key  = i.toString() + "." + j.toString();
                 var cell = cells[key];
-                if (cell.pulse){
-                    if (cell.direction){
-                        //toward top
-                        if (cell.loop < MAX_LOOP){
-                            cell.color = mix(cell.color, cell.top, INCREMENT);
-                            cell.loop++;
-                        } else {
-                            cell.direction = !cell.direction;
-                            cell.loop = 0;
-                        }
+                if (cell.direction){
+                    //toward top
+                    if (cell.loop < MAX_LOOP){
+                        cell.color = domainColor(cell.pure, cell.loop / MAX_LOOP);
+                        cell.loop++;
                     } else {
-                        //toward default
-                        if (cell.loop < MAX_LOOP){
-                            cell.color = mix(cell.color, DEFAULT, INCREMENT);
-                            cell.loop++;
-                        } else {
-                            //at the bottom, change it's top color to something else.
-                            var original = randomColor();
-                            //for the love of god please refactor this
-                            var color = mix(original, DEFAULT, .5);
-                            color = mix(color, WHITE, .5);
-                            color = mix(color, WHITE, .5);
-                            cell.top = color;
-
-                            cell.direction = !cell.direction;
-                            cell.loop = 0;
-                        }
+                        cell.direction = !cell.direction;
+                    }
+                } else {
+                    //toward default
+                    if (cell.loop > 0){
+                        cell.color = domainColor(cell.pure, cell.loop / MAX_LOOP);
+                        cell.loop--;
+                    } else {
+                        //at the bottom, change it's top color to something else.
+                        var original = randomColor();
+                        cell.pure = original;
+                        cell.direction = !cell.direction;
                     }
                 }
             }   
