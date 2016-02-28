@@ -1,8 +1,7 @@
-
 //globals
 var pk;
 var isPaused = false;
-var stepTime = 20;
+var stepTime = 50;
 
 //constants
 var CELLS_WIDE = 35;
@@ -13,7 +12,9 @@ var DEFAULT = {"red" : 0, "green": 0, "blue":0};
 var MAX_DIFFER = .05;
 var DIRECTION_PROB = .5;
 var INCREMENT = .95;
-var MAX_LOOP = 100;
+var MAX_LOOP = 50;
+var COLOR_SHIFT = true;
+var SHIFT_TO = {"red" : 183, "green": 0, "blue":255};
 
 // initializer
 $(document).ready(function(){
@@ -32,7 +33,11 @@ function randomColor(){
     var red = Math.floor(Math.random() * 255);
     var green = Math.floor(Math.random() * 255);
     var blue = Math.floor(Math.random() * 255);
-    return {"red" : red, "green" : green, "blue" : blue};
+    var color = {"red" : red, "green" : green, "blue" : blue}
+    if (COLOR_SHIFT) {
+        color = mix(SHIFT_TO, color, .3);
+    }
+    return color;
 }
 /* Returns a color in the domain, randomly in the middle of it's cycle */
 function domainColor(color, random){
