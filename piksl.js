@@ -6,10 +6,10 @@ var stepTime = 50;
 //constants
 var CELLS_WIDE = 35;
 var WHITE = {"red" : 255, "green": 255, "blue":255};
-var DEFAULT_TOP = {"red" : 32, "green": 32, "blue":32};
-var DEFAULT_BOTTOM = {"red" : 0, "green": 0, "blue":0};
-var DEFAULT = {"red" : 0, "green": 0, "blue":0};
-var MAX_DIFFER = .05;
+//var DEFAULT_TOP = {"red" : 32, "green": 32, "blue":32};
+//var DEFAULT_BOTTOM = {"red" : 0, "green": 0, "blue":0};
+var DEFAULT = {"red" : 123, "green": 175, "blue":212};
+var MAX_DIFFER = .15;
 var DIRECTION_PROB = .5;
 var INCREMENT = .95;
 var MAX_LOOP = 50;
