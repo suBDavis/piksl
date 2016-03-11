@@ -12,7 +12,7 @@ var DEFAULT = {"red" : 123, "green": 175, "blue":212};
 var MAX_DIFFER = .15;
 var DIRECTION_PROB = .5;
 var INCREMENT = .95;
-var MAX_LOOP = 50;
+var MAX_LOOP = 30;
 var COLOR_SHIFT = true;
 var SHIFT_TO = {"red" : 183, "green": 0, "blue":255};
 
